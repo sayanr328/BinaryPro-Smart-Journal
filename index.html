@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BinaryPro</title>
+    <title>BinaryPro: Smart Journal</title>
 
     <meta name="theme-color" content="#0f172a">
     <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/2953/2953363.png">
@@ -87,7 +87,7 @@
             border-color: var(--accent); color: white;
             box-shadow: none;
         }
-        input::-webkit-calendar-picker-indicator { opacity: 0; }
+        input::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.6; cursor: pointer; }
 
         .btn-call {
             background: linear-gradient(135deg, #10b981, #059669); border: none;
@@ -109,29 +109,16 @@
         .win { border-left-color: var(--win); }
         .loss { border-left-color: var(--loss); }
 
-        /* --- Tilt Mode Overlay --- */
-        #tilt-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(10, 15, 25, 0.98); backdrop-filter: blur(20px);
-            z-index: 9999; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; text-align: center;
-            padding: 30px;
-        }
-        .tilt-icon { font-size: 4rem; color: #3b82f6; margin-bottom: 25px; animation: pulse-slow 3s infinite; text-shadow: 0 0 30px rgba(59, 130, 246, 0.5); }
-        .tilt-timer { font-family: var(--font-num); font-size: 3.5rem; font-weight: 700; color: white; margin: 20px 0; letter-spacing: 2px; }
-        .tilt-message { font-size: 1.1rem; color: #cbd5e1; max-width: 320px; line-height: 1.6; margin-bottom: 10px; font-weight: 300; }
-        .tilt-sub { font-size: 0.85rem; color: #64748b; letter-spacing: 1px; text-transform: uppercase; margin-top: 20px; }
-        @keyframes pulse-slow { 0% { opacity: 0.6; transform: scale(0.95); } 50% { opacity: 1; transform: scale(1.05); } 100% { opacity: 0.6; transform: scale(0.95); } }
-        
         /* Microphone Pulse */
         .mic-active { color: #ef4444 !important; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
 
         /* Heatmap & Calc */
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; }
-        .day-cell { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 8px; font-size: 0.8rem; color: #94a3b8; }
+        .day-cell { aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 8px; font-size: 0.8rem; color: #94a3b8; position: relative; }
         .day-cell.has-profit { background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #10b981; }
         .day-cell.has-loss { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #ef4444; }
+        .day-pnl { font-size: 0.65rem; font-weight: 700; margin-top: 2px; }
         
         .growth-list { max-height: 300px; overflow-y: auto; }
         .growth-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem; }
@@ -153,22 +140,6 @@
 <body>
 
     <div class="toast-container" id="toast-area"></div>
-
-    <div id="tilt-overlay" class="d-none">
-        <div class="tilt-icon"><i class="fas fa-shield-alt"></i></div>
-        <h2 class="fw-bold text-white mb-4">Risk Protocol Activated</h2>
-        <p class="tilt-message">
-            Trading operations are temporarily suspended to protect your equity.
-        </p>
-        <p class="tilt-message text-white fw-bold">
-            "Capital preservation is your only edge."
-        </p>
-        <p class="tilt-message small">
-            Step away. Reset your mind. Return stronger.
-        </p>
-        <div class="tilt-timer" id="tilt-timer">30:00</div>
-        <p class="tilt-sub"><i class="fas fa-lock me-2"></i>SYSTEM LOCKED</p>
-    </div>
 
     <div id="view-login" class="auth-wrapper fade-in">
         <div class="glass-card p-4" style="width: 100%; max-width: 380px;">
@@ -206,6 +177,7 @@
                     <button class="btn btn-sm btn-link text-white p-0" onclick="app.tools.openCalendar()" title="Heatmap"><i class="fas fa-calendar-alt"></i></button>
                     <button class="btn btn-sm btn-link text-white p-0" onclick="app.tools.openCalculator()" title="Growth Tool"><i class="fas fa-calculator"></i></button>
                     <div style="width: 1px; height: 20px; background: rgba(255,255,255,0.2);"></div>
+                    
                     <button class="btn btn-sm btn-link text-white p-0" onclick="app.ui.openCreator()" title="Dev Info"><i class="fas fa-info-circle"></i></button>
                     <button class="btn btn-sm btn-link text-white p-0" onclick="app.ui.openExport()" title="Export"><i class="fas fa-download"></i></button>
                     <div class="nav-avatar" onclick="app.ui.openProfile()" id="nav-avatar-display" title="My Profile" style="cursor: pointer;"></div>
@@ -276,27 +248,39 @@
         </div>
     </div>
 
+    <div class="modal fade" id="limitModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background: #1e293b; border-color: #334155; text-align: center;">
+                <div class="modal-body pt-4 pb-4">
+                    <div id="limit-icon" class="mb-3" style="font-size: 3rem;"></div>
+                    <h4 class="text-white fw-bold mb-2" id="limit-title">Title</h4>
+                    <p class="text-muted small px-3 mb-4" id="limit-msg">Message</p>
+                    <button class="btn btn-outline-secondary rounded-pill w-50" data-bs-dismiss="modal">I Understand</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="calendarModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content" style="background: #1e293b; border-color: #334155;"><div class="modal-header border-secondary"><h5 class="modal-title text-white">Performance Heatmap</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="calendar-grid" id="calendar-grid"></div></div></div></div></div>
     <div class="modal fade" id="calculatorModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content" style="background: #1e293b; border-color: #334155;"><div class="modal-header border-secondary"><h5 class="modal-title text-white">Growth Blueprint</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="row g-2 mb-3"><div class="col-4"><label class="small text-muted">Capital</label><input type="number" id="calc-cap" class="form-control" value="100"></div><div class="col-4"><label class="small text-muted">Daily %</label><input type="number" id="calc-pct" class="form-control" value="10"></div><div class="col-4"><label class="small text-muted">Days</label><input type="number" id="calc-days" class="form-control" value="30"></div></div><button class="btn btn-primary w-100 mb-3" onclick="app.tools.calculateGrowth()">Generate Plan</button><div class="growth-list" id="growth-list"></div></div></div></div></div>
     <div class="modal fade" id="profileModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content" style="background: #1e293b; border-color: #334155;"><div class="modal-header border-secondary"><h5 class="modal-title text-white">My Account</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="user-avatar-upload" onclick="document.getElementById('profile-pic-input').click()" style="width: 90px; height: 90px; margin: 0 auto 15px auto; background: #334155; border-radius: 50%; border: 3px solid var(--accent); display:flex; justify-content:center; align-items:center;"><img id="profile-img-preview" src="" class="d-none" style="width:100%;height:100%;border-radius:50%;object-fit:cover;"><i id="profile-icon-default" class="fas fa-camera text-white fs-2"></i></div><input type="file" id="profile-pic-input" hidden accept="image/*" onchange="app.auth.handleImageUpload(this)"><div class="mb-2"><label class="small text-muted">Name</label><input type="text" id="prof-name" class="form-control"></div><div class="mb-2"><label class="small text-muted">Email</label><input type="email" id="prof-email" class="form-control"></div><div class="mb-2"><label class="small text-muted">Phone</label><input type="tel" id="prof-phone" class="form-control"></div><div class="mb-2"><label class="small text-muted">Address</label><input type="text" id="prof-address" class="form-control"></div><div class="mb-4"><label class="small text-muted">New Password</label><input type="password" id="prof-pass" class="form-control" placeholder="Optional"></div><button class="btn btn-success w-100 mb-2" onclick="app.auth.updateProfile()">Save Changes</button><button class="btn btn-outline-danger w-100" onclick="app.auth.logout()">Log Out</button></div></div></div></div>
-    <div class="modal fade" id="creatorModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content" style="background: #1e293b; border-color: #334155; overflow: hidden;"><div class="modal-body text-center pt-5 pb-4"><div class="creator-avatar mb-3" style="width:70px;height:70px;margin:0 auto;background:linear-gradient(135deg,#6366f1,#a855f7);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:1.5rem;">SR</div><h4 class="text-white fw-bold mb-1">Sayan Roy <i class="fas fa-check-circle text-primary small"></i></h4><p class="text-muted small mb-3">Professional Trader & AI Engineer</p><div class="d-flex justify-content-center flex-wrap mb-4"><span class="badge bg-secondary me-1">Trader</span><span class="badge bg-secondary me-1">Developer</span><span class="badge bg-secondary">AI/ML</span></div><div class="bg-dark bg-opacity-25 rounded-3 p-3 text-start mx-1 mb-3"><div class="d-flex justify-content-between mb-1"><span class="small text-muted">Exp</span><span class="small text-white fw-bold">3+ Years</span></div><div class="d-flex justify-content-between"><span class="small text-muted">Ver</span><span class="small text-white fw-bold">2.3.0 Pro</span></div></div><button class="btn btn-outline-secondary w-100 btn-sm rounded-pill" data-bs-dismiss="modal">Close</button></div><div class="card-footer bg-transparent border-top border-secondary text-center py-2"><small class="text-muted" style="font-size: 0.65rem;">&copy; 2026 Sayan Roy. All Rights Reserved.</small></div></div></div></div>
+    <div class="modal fade" id="creatorModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content" style="background: #1e293b; border-color: #334155; overflow: hidden;"><div class="modal-body text-center pt-5 pb-4"><div class="creator-avatar mb-3" style="width:70px;height:70px;margin:0 auto;background:linear-gradient(135deg,#6366f1,#a855f7);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:1.5rem;">SR</div><h4 class="text-white fw-bold mb-1">Sayan Roy <i class="fas fa-check-circle text-primary small"></i></h4><p class="text-muted small mb-3">Professional Trader & AI Engineer</p><div class="d-flex justify-content-center flex-wrap mb-4"><span class="badge bg-secondary me-1">Trader</span><span class="badge bg-secondary me-1">Developer</span><span class="badge bg-secondary">AI/ML</span></div><div class="bg-dark bg-opacity-25 rounded-3 p-3 text-start mx-1 mb-3"><div class="d-flex justify-content-between mb-1"><span class="small text-muted">Exp</span><span class="small text-white fw-bold">3+ Years</span></div><div class="d-flex justify-content-between"><span class="small text-muted">Ver</span><span class="small text-white fw-bold">2.7.0 Pro</span></div></div><button class="btn btn-outline-secondary w-100 btn-sm rounded-pill" data-bs-dismiss="modal">Close</button></div><div class="card-footer bg-transparent border-top border-secondary text-center py-2"><small class="text-muted" style="font-size: 0.65rem;">&copy; 2026 Sayan Roy. All Rights Reserved.</small></div></div></div></div>
     <div class="modal fade" id="settingsModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content" style="background: #1e293b; border-color: #334155;"><div class="modal-header border-secondary"><h5 class="modal-title text-white">Trading Plan</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="mb-2"><label class="small text-muted">Capital ($)</label><input type="number" id="edit-cap" class="form-control"></div><div class="mb-2"><label class="small text-muted">Target ($)</label><input type="number" id="edit-tp" class="form-control"></div><div class="mb-3"><label class="small text-muted">Max Loss ($)</label><input type="number" id="edit-sl" class="form-control"></div><button class="btn btn-primary w-100" onclick="app.core.saveSettings()">Save & Continue</button></div></div></div></div>
-    <div class="modal fade" id="exportModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content" style="background: #1e293b; border-color: #334155;"><div class="modal-body"><h5 class="mb-3 text-white">Download Data</h5><div class="row g-2"><div class="col-12"><div class="export-opt text-danger" onclick="app.export.toPDF()"><i class="fas fa-file-pdf"></i> PDF</div></div><div class="col-6"><div class="export-opt text-success" onclick="app.export.toExcel()"><i class="fas fa-file-excel"></i> Excel</div></div><div class="col-6"><div class="export-opt text-primary" onclick="app.export.toCSV()"><i class="fas fa-file-csv"></i> CSV</div></div></div></div></div></div></div>
+    <div class="modal fade" id="exportModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered modal-sm"><div class="modal-content" style="background: #1e293b; border-color: #334155;"><div class="modal-body"><h5 class="mb-3 text-white">Download Data</h5><div class="mb-3"><label class="small text-muted mb-1">FILTER DATE</label><input type="date" id="export-date" class="form-control mb-2" style="color-scheme: dark;"><div class="form-text small text-muted">Leave empty to download ALL data.</div></div><div class="row g-2"><div class="col-12"><div class="export-opt text-danger" onclick="app.export.trigger('pdf')"><i class="fas fa-file-pdf"></i> PDF</div></div><div class="col-6"><div class="export-opt text-success" onclick="app.export.trigger('excel')"><i class="fas fa-file-excel"></i> Excel</div></div><div class="col-6"><div class="export-opt text-primary" onclick="app.export.trigger('csv')"><i class="fas fa-file-csv"></i> CSV</div></div></div></div></div></div></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const app = {
-            data: { users: JSON.parse(localStorage.getItem('bp_users')) || [], user: null, trades: [], modals: {}, consLoss: 0, tiltEnd: null },
+            data: { users: JSON.parse(localStorage.getItem('bp_users')) || [], user: null, trades: [], modals: {} },
 
             init: function() {
-                ['settingsModal', 'exportModal', 'creatorModal', 'profileModal', 'calendarModal', 'calculatorModal'].forEach(id => app.data.modals[id.replace('Modal','')] = new bootstrap.Modal(document.getElementById(id)));
+                ['settingsModal', 'exportModal', 'creatorModal', 'profileModal', 'calendarModal', 'calculatorModal', 'limitModal'].forEach(id => app.data.modals[id.replace('Modal','')] = new bootstrap.Modal(document.getElementById(id)));
                 
                 const session = localStorage.getItem('bp_session');
                 if(session) {
                     app.data.user = JSON.parse(session);
                     app.core.loadData();
                     app.views.dashboard();
-                    app.core.checkTilt();
                 } else app.views.login();
             },
 
@@ -327,37 +311,6 @@
             core: {
                 loadData: () => { app.data.trades = JSON.parse(localStorage.getItem('bp_trades')) || []; app.data.trades = app.data.trades.filter(t => t.uid === app.data.user.id); },
                 
-                checkTilt: () => {
-                    const savedTilt = localStorage.getItem('bp_tilt_' + app.data.user.id);
-                    if(savedTilt) {
-                        const remaining = parseInt(savedTilt) - Date.now();
-                        if(remaining > 0) app.core.activateTilt(remaining);
-                        else localStorage.removeItem('bp_tilt_' + app.data.user.id);
-                    }
-                },
-
-                activateTilt: (duration = 900000) => {
-                    const overlay = document.getElementById('tilt-overlay');
-                    const timerEl = document.getElementById('tilt-timer');
-                    overlay.classList.remove('d-none');
-                    const endTime = Date.now() + duration;
-                    localStorage.setItem('bp_tilt_' + app.data.user.id, endTime);
-                    const interval = setInterval(() => {
-                        const now = Date.now();
-                        const diff = endTime - now;
-                        if(diff <= 0) {
-                            clearInterval(interval);
-                            overlay.classList.add('d-none');
-                            localStorage.removeItem('bp_tilt_' + app.data.user.id);
-                            app.data.consLoss = 0;
-                        } else {
-                            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                            const s = Math.floor((diff % (1000 * 60)) / 1000);
-                            timerEl.textContent = `${m}:${s < 10 ? '0'+s : s}`;
-                        }
-                    }, 1000);
-                },
-
                 trade: (res) => {
                     if(app.data.user.settings.cap === 0) return app.ui.openSettings();
                     
@@ -369,9 +322,6 @@
 
                     const pnl = (res === 'WIN') ? amt * (pct/100) : -amt;
                     
-                    if(res === 'LOSS') app.data.consLoss = (app.data.consLoss || 0) + 1;
-                    else app.data.consLoss = 0;
-
                     const trade = { id: Date.now(), uid: app.data.user.id, pair, amt, pct, res, pnl, logic, time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), date: new Date().toLocaleDateString() };
                     
                     app.data.trades.unshift(trade);
@@ -379,18 +329,20 @@
                     allTrades.push(trade);
                     localStorage.setItem('bp_trades', JSON.stringify(allTrades));
                     
-                    // --- CLEAR LOGIC FIELD AFTER TRADE ---
                     document.getElementById('inp-logic').value = '';
-                    
                     app.core.render();
 
+                    if (res === 'WIN') app.ui.toast(`+$${pnl.toFixed(2)} Win!`, 'success');
+                    else app.ui.toast('Trade Lost', 'error');
+
+                    // *** CHECK LIMITS AFTER TRADE ***
                     const stats = app.core.calc();
-                    if(app.data.consLoss >= 3 || stats.todayNet <= -app.data.user.settings.sl) {
-                        app.core.activateTilt(); 
-                    } else if (res === 'WIN') {
-                        app.ui.toast(`+$${pnl.toFixed(2)} Win!`, 'success');
-                    } else {
-                        app.ui.toast('Trade Lost', 'error');
+                    const s = app.data.user.settings;
+                    
+                    if(s.tp > 0 && stats.todayNet >= s.tp) {
+                        app.ui.showLimit('WIN');
+                    } else if(s.sl > 0 && stats.todayNet <= -s.sl) {
+                        app.ui.showLimit('LOSS');
                     }
                 },
 
@@ -431,9 +383,20 @@
             tools: {
                 openCalendar: () => {
                     const grid = document.getElementById('calendar-grid'); grid.innerHTML = '';
-                    const now = new Date(), days = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
-                    const daily = {}; app.data.trades.forEach(t => daily[new Date(t.date).getDate()] = (daily[new Date(t.date).getDate()]||0)+t.pnl);
-                    for(let i=1; i<=days; i++) { const c=document.createElement('div'); c.className='day-cell'; c.innerHTML=`<div>${i}</div>`; if(daily[i]!==undefined){c.classList.add(daily[i]>=0?'has-profit':'has-loss'); c.innerHTML+=`<div class="day-pnl">${daily[i]>0?'+':''}${daily[i].toFixed(0)}</div>`;} grid.appendChild(c); }
+                    const now = new Date();
+                    const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+                    const daily = {}; 
+                    app.data.trades.forEach(t => {
+                        const tradeDate = new Date(t.id);
+                        if(tradeDate.getMonth() === now.getMonth() && tradeDate.getFullYear() === now.getFullYear()) {
+                            daily[tradeDate.getDate()] = (daily[tradeDate.getDate()]||0) + t.pnl;
+                        }
+                    });
+                    for(let i=1; i<=daysInMonth; i++) { 
+                        const c = document.createElement('div'); c.className = 'day-cell'; c.innerHTML = `<div>${i}</div>`; 
+                        if(daily[i] !== undefined){ c.classList.add(daily[i] >= 0 ? 'has-profit' : 'has-loss'); c.innerHTML += `<div class="day-pnl">${daily[i]>0?'+':''}${daily[i].toFixed(0)}</div>`; } 
+                        grid.appendChild(c); 
+                    }
                     app.data.modals.calendar.show();
                 },
                 openCalculator: () => app.data.modals.calculator.show(),
@@ -443,7 +406,6 @@
                     list.innerHTML = '';
                     for(let i=1; i<=days; i++) { const p = bal*(pct/100); bal+=p; list.innerHTML+=`<div class="growth-item"><span class="growth-day">Day ${i}</span><span class="growth-val">$${bal.toFixed(2)} <span class="text-success small">(+$${p.toFixed(2)})</span></span></div>`; }
                 },
-                
                 toggleMic: () => {
                     if(!('webkitSpeechRecognition' in window)) return app.ui.toast("Voice not supported on this browser", "error");
                     const btn = document.getElementById('btn-mic'), logic = document.getElementById('inp-logic');
@@ -458,9 +420,28 @@
 
             export: {
                 name: () => `BinaryPro_${app.data.user.name}_${new Date().toISOString().slice(0,10)}`,
-                toPDF: function() { const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.text(`${app.data.user.name}'s History`, 14, 20); const rows = app.data.trades.map(t => [t.date, t.time, t.pair, `$${t.amt}`, t.res, `$${t.pnl.toFixed(2)}`, t.logic||'-']); doc.autoTable({ head: [['Date','Time','Pair','Inv','Res','PnL','Logic']], body: rows, startY: 30 }); doc.save(this.name()+".pdf"); app.data.modals.export.hide(); },
-                toExcel: function() { let h=`<table><tr><th>Date</th><th>Time</th><th>Pair</th><th>Inv</th><th>Res</th><th>PnL</th><th>Logic</th></tr>`; app.data.trades.forEach(t=>{h+=`<tr><td>${t.date}</td><td>${t.time}</td><td>${t.pair}</td><td>${t.amt}</td><td>${t.res}</td><td>${t.pnl}</td><td>${t.logic||''}</td></tr>`}); const b=new Blob([h],{type:'application/vnd.ms-excel'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=this.name()+".xls"; a.click(); app.data.modals.export.hide(); },
-                toCSV: function() { const h=['Date','Time','Pair','Inv','Res','PnL','Logic']; const r=app.data.trades.map(t=>[t.date,t.time,t.pair,t.amt,t.res,t.pnl.toFixed(2),(t.logic||'')].join(',')); const c=[h.join(','),...r].join('\n'); const a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURI(c); a.download=this.name()+".csv"; a.click(); app.data.modals.export.hide(); }
+                getData: () => {
+                    const filterDate = document.getElementById('export-date').value;
+                    if (!filterDate) return app.data.trades; 
+                    return app.data.trades.filter(t => new Date(t.id).toISOString().slice(0,10) === filterDate);
+                },
+                trigger: function(type) {
+                    const data = this.getData();
+                    if(data.length === 0) return app.ui.toast("No trades found for this date", "error");
+                    if(type === 'pdf') {
+                        const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.text(`${app.data.user.name}'s History`, 14, 20); 
+                        const rows = data.map(t => [t.date, t.time, t.pair, `$${t.amt}`, t.res, `$${t.pnl.toFixed(2)}`, t.logic||'-']); 
+                        doc.autoTable({ head: [['Date','Time','Pair','Inv','Res','PnL','Logic']], body: rows, startY: 30 }); doc.save(this.name()+".pdf");
+                    } else if (type === 'excel') {
+                        let h=`<table><tr><th>Date</th><th>Time</th><th>Pair</th><th>Inv</th><th>Res</th><th>PnL</th><th>Logic</th></tr>`; 
+                        data.forEach(t=>{h+=`<tr><td>${t.date}</td><td>${t.time}</td><td>${t.pair}</td><td>${t.amt}</td><td>${t.res}</td><td>${t.pnl}</td><td>${t.logic||''}</td></tr>`}); 
+                        const b=new Blob([h],{type:'application/vnd.ms-excel'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=this.name()+".xls"; a.click();
+                    } else if (type === 'csv') {
+                        const h=['Date','Time','Pair','Inv','Res','PnL','Logic']; const r=data.map(t=>[t.date,t.time,t.pair,t.amt,t.res,t.pnl.toFixed(2),(t.logic||'')].join(',')); 
+                        const c=[h.join(','),...r].join('\n'); const a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURI(c); a.download=this.name()+".csv"; a.click();
+                    }
+                    app.data.modals.export.hide();
+                }
             },
 
             ui: {
@@ -473,7 +454,24 @@
                     app.data.modals.profile.show();
                 },
                 updateNavBar: () => { document.getElementById('user-display').textContent = app.data.user.name; const n = document.getElementById('nav-avatar-display'); if(app.data.user.avatar) n.innerHTML = `<img src="${app.data.user.avatar}">`; else n.textContent = app.data.user.name.charAt(0).toUpperCase(); },
-                toast: (msg, type) => { const a = document.getElementById('toast-area'), e = document.createElement('div'); e.className = 'custom-toast fade-in mb-2'; e.innerHTML = `<i class="fas fa-${type==='success'?'check':'exclamation'}-circle text-${type}"></i> <b>${msg}</b>`; a.appendChild(e); setTimeout(()=>e.remove(), 3000); }
+                toast: (msg, type) => { const a = document.getElementById('toast-area'), e = document.createElement('div'); e.className = 'custom-toast fade-in mb-2'; e.innerHTML = `<i class="fas fa-${type==='success'?'check':'exclamation'}-circle text-${type}"></i> <b>${msg}</b>`; a.appendChild(e); setTimeout(()=>e.remove(), 3000); },
+                
+                showLimit: (type) => {
+                    const icon = document.getElementById('limit-icon');
+                    const title = document.getElementById('limit-title');
+                    const msg = document.getElementById('limit-msg');
+                    
+                    if(type === 'WIN') {
+                        icon.innerHTML = '<i class="fas fa-trophy text-success"></i>';
+                        title.textContent = "Daily Target Achieved";
+                        msg.textContent = "Great discipline! Secure your profits and return tomorrow. Don't risk giving it back.";
+                    } else {
+                        icon.innerHTML = '<i class="fas fa-shield-alt text-danger"></i>';
+                        title.textContent = "Daily Limit Reached";
+                        msg.textContent = "Protect your capital. Stop now to preserve your edge. The market will be there tomorrow.";
+                    }
+                    app.data.modals.limit.show();
+                }
             }
         };
 
